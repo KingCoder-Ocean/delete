@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Runs through or near Coventry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#EAF0F1;--surface:#FFFFFF;--ink:#0E2A35;--muted:#55707A;--line:#CFDADD;--sea:#1C6B78;--on-sea:#FFFFFF;--signal:#D9971A;--alert:#B3412B;
+  --font:"Archivo","Segoe UI","Helvetica Neue",Arial,sans-serif;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0B1A20;--surface:#11252D;--ink:#E4EDEF;--muted:#92A9B1;--line:#23414B;--sea:#5BB4C1;--on-sea:#06171C;--signal:#EDB648;--alert:#E57A63;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0B1A20;--surface:#11252D;--ink:#E4EDEF;--muted:#92A9B1;--line:#23414B;--sea:#5BB4C1;--on-sea:#06171C;--signal:#EDB648;--alert:#E57A63;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--font);display:grid;grid-template-columns:minmax(300px,380px) 1fr;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+aside{overflow-y:auto;border-right:1px solid var(--line);background:var(--surface);padding:18px 18px 40px}
+#map{min-height:300px;background:#dfe6e8}
+@media (max-width:800px){body{grid-template-columns:1fr;grid-template-rows:60vh auto}#map{order:-1}aside{border-right:0;border-top:1px solid var(--line)}}
+h1{margin:0;font-size:15px;font-weight:650;color:var(--muted)}
+.count{font-size:76px;line-height:.95;font-weight:800;font-stretch:70%;margin:10px 0 2px;color:var(--sea)}
+.lead{font-size:19px;font-stretch:85%;font-weight:700;margin:0}
+.sub{color:var(--muted);margin:6px 0 0}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:14px;text-align:center;cursor:pointer;margin:14px 0 8px;color:var(--muted)}
+.drop.over{border-color:var(--sea);color:var(--ink)}
+.files{list-style:none;padding:0;margin:0;font-size:13px}
+.files li{margin:2px 0;color:var(--muted)}
+.files li.ok{color:var(--ink)}
+.files li.ok::before{content:"✓ ";color:var(--sea);font-weight:800}
+.files li.no::before{content:"○ "}
+.err{color:var(--alert);font-weight:600;font-size:13px;margin:6px 0 0}
+.row{display:flex;align-items:center;gap:8px;margin:14px 0 0;font-size:13.5px}
+.row input{width:4.5em;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 6px}
+.days{display:flex;flex-wrap:wrap;gap:4px;margin:12px 0 0}
+.days button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 10px;cursor:pointer;font-size:13px}
+.days button[aria-pressed="true"]{background:var(--sea);border-color:var(--sea);color:var(--on-sea);font-weight:650}
+.days button:disabled{opacity:.4;cursor:default}
+.day{margin:16px 0 4px;font-weight:750;font-size:15px}
+.runs{list-style:none;padding:0;margin:0}
+.runs li{display:grid;grid-template-columns:12px 1fr;gap:8px;align-items:start;padding:7px 6px;border-radius:6px;cursor:pointer}
+.runs li:hover{background:color-mix(in srgb,var(--sea) 8%,transparent)}
+.runs li[aria-current="true"]{background:color-mix(in srgb,var(--sea) 16%,transparent)}
+.sw{width:12px;height:12px;border-radius:3px;margin-top:4px}
+.runs b{font-weight:700}
+.runs small{display:block;color:var(--muted);font-size:12.5px}
+.shops{margin:4px 0 2px;padding-left:20px;font-size:13px}
+.shops li{display:list-item;padding:1px 0;cursor:default}
+.shops li:hover{background:none}
+.shops .nr{color:var(--sea);font-weight:700}
+details summary{cursor:pointer;color:var(--sea);font-size:12.5px;margin-top:2px}
+.ask{margin:18px 0 4px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.ask h2{margin:0 0 8px;font-size:15px}
+.askrow{display:flex;gap:6px;flex-wrap:wrap}
+.askrow input{flex:1 1 9em;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:6px 8px;text-transform:uppercase}
+.askrow select{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px}
+.askrow button{border:0;background:var(--sea);color:var(--on-sea);border-radius:6px;padding:6px 12px;font-weight:650;cursor:pointer}
+.answer{margin-top:10px;font-size:13.5px}
+.tapbtn{margin-top:8px;border:1px solid var(--sea);background:var(--surface);color:var(--sea);border-radius:6px;padding:6px 10px;font-weight:650;cursor:pointer;width:100%}
+.tapbtn[aria-pressed="true"]{background:var(--signal);border-color:var(--signal);color:#1b1300}
+.answer .pick{font-size:16px;font-weight:750;margin:0 0 6px}
+.answer ul{margin:6px 0 0;padding-left:18px}
+.answer .muted{color:var(--muted);font-size:12.5px}
+.newpin{width:18px;height:18px;transform:rotate(45deg);background:#D9971A;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
+.note{color:var(--muted);font-size:12.5px;margin:18px 0 0}
+.hidden{display:none!important}
+.pin{border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.depot{width:22px;height:22px;border-radius:5px;background:#0E2A35;color:#fff;font:800 12px/22px var(--font);text-align:center;border:2px solid #fff}
+.cov{font:800 13px var(--font);color:#0E2A35;text-shadow:0 0 3px #fff,0 0 3px #fff;white-space:nowrap}
+</style>
+</head>
+<body>
+<aside>
+  <h1>Ocean King runs through or near Coventry</h1>
+  <div id="result" class="hidden">
+    <div class="count" id="count">0</div>
+    <p class="lead" id="lead"></p>
+    <p class="sub" id="split"></p>
+  </div>
+  <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose files">Drop the stock movement file here, or click to choose. The first time, add the routing template (Routes - Delivery Days.xlsx) and postcode_cache.csv too.</div>
+  <input type="file" id="file" multiple accept=".xlsx,.xls,.xlsm,.csv" class="hidden">
+  <ul class="files">
+    <li id="fTpl" class="no">Routing template</li>
+    <li id="fGeo" class="no">Map locations</li>
+    <li id="fMov" class="no">Stock movement file</li>
+  </ul>
+  <p class="err hidden" id="err"></p>
+  <div id="controls" class="hidden">
+    <section class="ask">
+      <h2>Where should a new shop go?</h2>
+      <div class="askrow"><input id="newPc" type="text" placeholder="Postcode, or numbers from Google Maps" aria-label="Postcode or map position of the new shop" autocomplete="off">
+        <select id="newDay" aria-label="Day the customer wants"><option value="">Any day</option></select>
+        <button type="button" id="suggest">Suggest a run</button></div>
+      <button type="button" id="tapBtn" class="tapbtn">Or tap the map where the shop is</button>
+      <div id="answer" class="answer hidden" role="status"></div>
+    </section>
+    <div class="row"><label for="miles">Counts as near if it comes within</label><input id="miles" type="text" inputmode="decimal" value="10"><span>miles of Coventry</span></div>
+    <div class="days" id="days" role="group" aria-label="Day"></div>
+    <div id="list"></div>
+    <p style="margin:14px 0 0"><button type="button" id="dl" style="border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px 12px;cursor:pointer">Download the runs and shops (Excel)</button></p>
+    <p class="note" id="how"></p>
+  </div>
+</aside>
+<div id="map" role="region" aria-label="Map of the runs"></div>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const COV=[52.4068,-1.5197],DEPOT_PC="DE24 8ZF",DEPOT_FALLBACK=[52.9046,-1.4249];
+const COLORS=["#1C6B78","#C2410C","#7C3AED","#15803D","#B91C1C","#0369A1","#A16207","#BE185D","#4D7C0F","#0F766E","#9333EA","#B45309","#1D4ED8","#047857","#DB2777"];
+function h(t,a,...k){const e=document.createElement(t);if(a)for(const[x,v]of Object.entries(a)){if(v==null||v===false)continue;if(x==="class")e.className=v;else if(x==="style")e.style.cssText=v;else if(x.startsWith("on"))e.addEventListener(x.slice(2),v);else e.setAttribute(x,v===true?"":v);}
+  for(const c of k.flat(Infinity)){if(c==null||c===false)continue;e.append(c instanceof Node?c:document.createTextNode(String(c)));}return e;}
+const rc=(el,...k)=>el.replaceChildren(...k.flat(Infinity).filter(x=>x!=null&&x!==false));
+const txt=v=>v==null?"":String(v).replace(/\s+/g," ").trim();
+const cid=v=>txt(v).replace(/\.0$/,"");
+const key=s=>String(s??"").toLowerCase().replace(/\(.*?\)/g,"").replace(/[^a-z0-9]/g,"");
+const num=v=>{if(v==null||v==="")return null;if(typeof v==="number")return v;const n=Number(String(v).replace(/[£,\s]/g,""));return Number.isFinite(n)?n:null;};
+const normPc=p=>{const c=String(p||"").toUpperCase().replace(/[^A-Z0-9]/g,"");if(c.length<5||c.length>7)return "";const f=c.slice(0,-3)+" "+c.slice(-3);return /^[A-Z]{1,2}[0-9][A-Z0-9]? [0-9][A-Z]{2}$/.test(f)?f:"";};
+const dayName=v=>DAYS.find(d=>d.slice(0,3).toLowerCase()===String(v||"").trim().slice(0,3).toLowerCase())||"";
+const niceName=s=>{const b=txt(s).replace(/[-\s](mon|tue|wed|thu|fri|sat|sun)[a-z]*$/i,"").trim();return b===b.toUpperCase()?b.toLowerCase().replace(/\b[a-z]/g,c=>c.toUpperCase()):b;};
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+function toDate(v){
+  if(v instanceof Date&&!isNaN(v))return new Date(Date.UTC(v.getFullYear(),v.getMonth(),v.getDate()));
+  if(typeof v==="number"&&v>20000&&v<80000)return new Date(Date.UTC(1899,11,30)+v*864e5);
+  const m=/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/.exec(String(v||""));
+  if(m){const y=+m[3]<100?2000+(+m[3]):+m[3];return new Date(Date.UTC(y,+m[2]-1,+m[1]));}
+  const d=new Date(v);return isNaN(d)?null:new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+}
+const hav=(a,b)=>{const R=3958.8,r=Math.PI/180,dl=(b[0]-a[0])*r,dn=(b[1]-a[1])*r;const x=Math.sin(dl/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x));};
+function segMiles(p,a,b){const lat0=(a[0]+b[0])/2,k=Math.cos(lat0*Math.PI/180)*69.09,P=[p[1]*k,p[0]*69.09],A=[a[1]*k,a[0]*69.09],B=[b[1]*k,b[0]*69.09];
+  const dx=B[0]-A[0],dy=B[1]-A[1],L=dx*dx+dy*dy;let t=L?((P[0]-A[0])*dx+(P[1]-A[1])*dy)/L:0;t=Math.max(0,Math.min(1,t));return Math.hypot(P[0]-A[0]-t*dx,P[1]-A[1]-t*dy);}
+
+/* ---------- data kept in this browser (shared with the route optimiser) ---------- */
+let BOOK=store.get("cr-book",null)||store.get("ok2-book",null);            // {customers:{cus:{n,p,rows:[[day,route,rname,seq]]}}}
+const GEO=new Map(store.get("ok2-geo",[]));
+let MOV=null;                                    // {name, cust: Map(cus -> {name, dates:Set})}
+
+function headerRow(rows,must){for(let i=0;i<Math.min(rows.length,30);i++){const ks=(rows[i]||[]).map(key);if(must.every(m=>ks.some(k=>k===m||k.startsWith(m))))return i;}return -1;}
+function colFinder(hdr){const H=hdr.map(key);return(...ns)=>{for(const n of ns){const i=H.indexOf(key(n));if(i>=0)return i;}for(const n of ns){const i=H.findIndex(k=>k.startsWith(key(n)));if(i>=0)return i;}return -1;};}
+function readTemplate(rows,hi){
+  const col=colFinder(rows[hi]),cD=col("Day"),cR=col("RouteNo"),cN=col("Route Name"),cS=col("Sequence"),cC=col("Cus no.","CusNo","Customer"),cNm=col("Name"),cP=col("Postcode");
+  const customers={};
+  for(const r of rows.slice(hi+1)){if(!r)continue;const cus=cid(r[cC]);if(!cus)continue;
+    const c=customers[cus]||(customers[cus]={n:txt(r[cNm]),p:"",rows:[]});const pc=normPc(r[cP]);if(!c.p&&pc)c.p=pc;
+    c.rows.push([dayName(r[cD]),cid(r[cR]),niceName(r[cN]),num(r[cS])]);}
+  BOOK={customers,saved:new Date().toISOString()};store.set("cr-book",BOOK);
+}
+function readGeo(rows,hi){const col=colFinder(rows[hi]),cP=col("Postcode"),cLa=col("Latitude","Lat"),cLo=col("Longitude","Lon","Lng");
+  for(const r of rows.slice(hi+1)){if(!r)continue;const pc=normPc(r[cP]),la=num(r[cLa]),lo=num(r[cLo]);if(pc&&la>49&&la<61&&lo>-9&&lo<3)GEO.set(pc,[la,lo]);}
+  store.set("ok2-geo",[...GEO]);}
+function readMovements(rows,hi,name){
+  const col=colFinder(rows[hi]),cRef=col("Ref4"),cType=col("Move Type"),cDate=col("Move Date"),H=rows[hi].map(key),cQ=H.indexOf("quantity"),cSp=col("Split Quantity","Split Qty");
+  const cust=new Map();
+  for(const r of rows.slice(hi+1)){if(!r)continue;const type=txt(r[cType]);
+    if(!/sale/i.test(type)||/cred|crn|return|rtn|\bcr\b/i.test(type))continue;
+    const q=num(r[cQ])||0,sp=cSp>=0?num(r[cSp])||0:0;if(q>0||sp>0||(q===0&&sp===0))continue;   // goods going out only
+    const m=/^\s*(\d+)\s*[-–:]?\s*(.*)$/.exec(txt(r[cRef]));if(!m)continue;
+    const d=toDate(r[cDate]);if(!d)continue;
+    const c=cust.get(m[1])||{name:m[2].trim(),dates:new Set()};c.dates.add(d.toISOString().slice(0,10));cust.set(m[1],c);}
+  MOV={name,cust};
+}
+const readBuf=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(new Error("Couldn’t open "+f.name));r.readAsArrayBuffer(f);});
+const showErr=m=>{$("err").textContent=m||"";$("err").classList.toggle("hidden",!m);};
+async function addFiles(files){
+  showErr("");if(typeof XLSX==="undefined"){showErr("The spreadsheet reader didn’t load. Check the internet connection and reload.");return;}
+  for(const f of files){
+    try{$("drop").textContent=`Reading ${f.name}…`;await new Promise(r=>setTimeout(r,30));
+      const csv=/\.csv$/i.test(f.name);
+      const wb=XLSX.read(new Uint8Array(await readBuf(f)),csv?{type:"array",raw:true}:{type:"array",cellDates:true});
+      let used=false;
+      for(const sn of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null,raw:true,blankrows:false});let hi;
+        if((hi=headerRow(rows,["ref4","movetype"]))>=0){readMovements(rows,hi,f.name);used=true;break;}
+        if((hi=headerRow(rows,["routeno","postcode"]))>=0){readTemplate(rows,hi);used=true;break;}
+        if((hi=headerRow(rows,["postcode","lat"]))>=0){readGeo(rows,hi);used=true;break;}}
+      if(!used)showErr(`${f.name} isn’t the stock movement file, the routing template or postcode_cache.csv.`);
+    }catch(e){showErr(`Couldn’t read ${f.name}: ${e.message}`);}
+  }
+  $("drop").textContent="Drop another stock movement file here to update the map.";
+  await refresh();
+}
+
+/* ---------- set delivery days from Move Date ---------- */
+const SET_PCT=25;
+function setDays(dates){
+  const ds=[...dates].sort();if(!ds.length)return[];
+  const cnt={};for(const d of ds){const w=DAYS[(new Date(d+"T12:00:00Z").getUTCDay()+6)%7];cnt[w]=(cnt[w]||0)+1;}
+  const weeks=Math.max(1,Math.floor((Date.parse(ds[ds.length-1])-Date.parse(ds[0]))/(7*864e5))+1);
+  const days=DAYS.filter(w=>cnt[w]&&cnt[w]/weeks>=SET_PCT/100);
+  return days.length?days:[DAYS.slice().sort((a,b)=>(cnt[b]||0)-(cnt[a]||0))[0]];
+}
+
+/* ---------- the template's runs, filled from the stock movement file ---------- */
+let RUNS=[],dayFilter="All",sel=null,depotLL=null,unmapped=0,notInTpl=0;
+async function lookup(pcs){
+  pcs=[...new Set(pcs.filter(p=>p&&!GEO.has(p)))];
+  for(let i=0;i<pcs.length;i+=100){try{const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),6000);
+    const r=await fetch("https://api.postcodes.io/postcodes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({postcodes:pcs.slice(i,i+100)}),signal:ctl.signal});
+    clearTimeout(t);const j=await r.json();for(const it of j.result||[])if(it.result)GEO.set(normPc(it.query),[it.result.latitude,it.result.longitude]);}catch(e){break;}}
+  store.set("ok2-geo",[...GEO]);
+}
+function buildRuns(){
+  const names=new Map();for(const[c,b]of Object.entries(BOOK.customers)){const k=key(b.n);if(k)names.set(k,names.has(k)&&names.get(k)!==c?null:c);}
+  const days=new Map();notInTpl=0;          // book cus -> set days
+  for(const[cus,m]of MOV.cust){let bc=BOOK.customers[cus]?cus:null;
+    if(!bc){const nm=m.name.replace(/^[A-Z]{1,3}\s*[-–]\s*/,"");bc=names.get(key(m.name))||names.get(key(nm))||null;}
+    if(!bc){notInTpl++;continue;}
+    const sd=setDays(m.dates);days.set(bc,[...new Set([...(days.get(bc)||[]),...sd])]);}
+  const runs=new Map();unmapped=0;
+  for(const[cus,b]of Object.entries(BOOK.customers)){const sd=days.get(cus);if(!sd)continue;
+    for(const[d,route,rname,seq]of b.rows){if(!d||!route||route==="0"||!sd.includes(d))continue;
+      const k=d+"|"+route,r=runs.get(k)||{day:d,route,name:rname,stops:[]};
+      if(r.stops.some(s=>s.cus===cus))continue;
+      const ll=GEO.get(b.p)||null;if(!ll)unmapped++;
+      r.stops.push({cus,name:b.n,pc:b.p,seq:seq??1e9,ll,days:sd});runs.set(k,r);}}
+  return[...runs.values()].map(r=>{r.stops.sort((a,b)=>a.seq-b.seq);return r;});
+}
+function classify(R){
+  for(const r of RUNS){const lls=r.stops.map(s=>s.ll).filter(Boolean),pts=[depotLL,...lls,depotLL];
+    r.near=r.stops.filter(s=>s.ll&&hav(s.ll,COV)<=R);
+    let min=Infinity;for(let i=0;i<pts.length-1;i++)min=Math.min(min,segMiles(COV,pts[i],pts[i+1]));
+    r.min=min;r.status=r.near.length?"through":min<=R?"near":null;}
+}
+async function refresh(){
+  marks();
+  if(!BOOK||!MOV){$("result").classList.add("hidden");$("controls").classList.add("hidden");
+    if(MOV&&!BOOK)showErr("Add the routing template (Routes - Delivery Days.xlsx) once, so the runs and addresses are known.");return;}
+  await lookup([DEPOT_PC,...Object.values(BOOK.customers).map(b=>b.p)]);
+  depotLL=GEO.get(DEPOT_PC)||DEPOT_FALLBACK;
+  RUNS=buildRuns();sel=null;draw(true);
+}
+function marks(){
+  const m=(id,ok,t)=>{$(id).className=ok?"ok":"no";$(id).textContent=t;};
+  m("fTpl",!!BOOK,BOOK?`Routing template: ${Object.keys(BOOK.customers).length} customers`:"Routing template (Routes - Delivery Days.xlsx), once");
+  m("fGeo",GEO.size>0,GEO.size?`Map locations: ${GEO.size} postcodes`:"Map locations (postcode_cache.csv), once");
+  m("fMov",!!MOV,MOV?`Stock movements: ${MOV.name}, ${MOV.cust.size} shops`:"Stock movement file");
+}
+
+/* ---------- show ---------- */
+let map=null,layer=null;
+function initMap(){
+  if(map||typeof L==="undefined")return;
+  map=L.map("map",{zoomSnap:.5});
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",{maxZoom:16,attribution:"Tiles © Esri, HERE, Garmin"}).addTo(map);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}",{maxZoom:16}).addTo(map);
+  layer=L.layerGroup().addTo(map);map.on("click",mapTapped);L.control.scale({imperial:true,metric:false}).addTo(map);map.setView(COV,9);
+}
+function draw(fit,keepSug){
+  if(!keepSug)SUG=null;
+  const R=Math.max(0.5,num($("miles").value)||10);classify(R);
+  const hits=RUNS.filter(r=>r.status),shown=hits.filter(r=>dayFilter==="All"||r.day===dayFilter);
+  if(sel&&!shown.includes(sel))shown.push(sel);
+  const color=r=>{const i=hits.indexOf(r);return i<0?"#55707A":COLORS[i%COLORS.length];};
+  $("result").classList.remove("hidden");$("controls").classList.remove("hidden");
+  const thr=hits.filter(r=>r.status==="through").length;
+  $("count").textContent=hits.length;
+  $("lead").textContent=`run${hits.length===1?"":"s"} a week go through or near Coventry`;
+  $("split").textContent=`${thr} deliver in or within ${R} miles of Coventry; ${hits.length-thr} only pass within ${R} miles on the way. Out of ${RUNS.length} runs on the template.`;
+  const per=Object.fromEntries(DAYS.map(d=>[d,hits.filter(r=>r.day===d).length]));
+  rc($("days"),h("button",{type:"button","aria-pressed":String(dayFilter==="All"),onclick:()=>{dayFilter="All";sel=null;draw(true);}},`All ${hits.length}`),
+    DAYS.map(d=>h("button",{type:"button","aria-pressed":String(dayFilter===d),disabled:!per[d],onclick:()=>{dayFilter=d;sel=null;draw(true);}},`${d.slice(0,3)} ${per[d]}`)));
+  rc($("list"),DAYS.filter(d=>(dayFilter==="All"||d===dayFilter)&&per[d]).map(d=>[h("div",{class:"day"},`${d}: ${per[d]} run${per[d]===1?"":"s"}`),
+    h("ul",{class:"runs"},hits.filter(r=>r.day===d).map(r=>h("li",{"aria-current":String(sel===r),onclick:()=>{sel=sel===r?null:r;draw(true);}},
+      h("span",{class:"sw",style:`background:${color(r)}`}),
+      h("div",null,h("b",null,`Run ${r.route}, ${r.name}`),
+        h("small",null,r.status==="through"?`${r.near.length} of ${r.stops.length} drops in or near Coventry`:`${r.stops.length} drops, passes about ${Math.max(0,r.min).toFixed(0)} miles from Coventry`),
+        h("details",{open:sel===r?true:null,onclick:e=>e.stopPropagation()},h("summary",null,`Shops in drop order (${r.stops.length})`),
+          h("ol",{class:"shops"},r.stops.map(s=>{const nr=s.ll&&hav(s.ll,COV)<=R;return h("li",null,h("span",{class:nr?"nr":null},s.name),` ${s.pc||"no postcode"}`,nr?h("span",{class:"nr"}," (near Coventry)"):null);}))))))) ]));
+  $("how").textContent=`Runs and drop order come from the routing template. Each shop’s set delivery days are read from its Move Dates in the stock movement file (a weekday counts if it was delivered on it in at least ${SET_PCT}% of weeks), and a shop is only on a run for a day it’s set for. Lines are straight between drops, so they show the order of the run, not the exact roads.${unmapped?` ${unmapped} drops have no map location and aren’t drawn.`:""}${notInTpl?` ${notInTpl} shops in the stock file aren’t in the template.`:""}`;
+  initMap();if(!map)return;layer.clearLayers();
+  L.circle(COV,{radius:R*1609.34,color:"#0E2A35",weight:1.5,dashArray:"5 6",fillOpacity:.05,interactive:false}).addTo(layer);
+  L.marker(COV,{icon:L.divIcon({className:"",html:'<span class="cov">Coventry</span>',iconSize:[0,0],iconAnchor:[28,-6]}),interactive:false}).addTo(layer);
+  L.marker(depotLL,{icon:L.divIcon({className:"",html:'<div class="depot">D</div>',iconSize:[22,22],iconAnchor:[11,11]}),zIndexOffset:1000}).bindTooltip("Depot").addTo(layer);
+  const pts=[depotLL,COV];
+  for(const r of shown){const on=!sel||sel===r,c=color(r),lls=r.stops.filter(s=>s.ll);
+    L.polyline([depotLL,...lls.map(s=>s.ll),depotLL],{color:c,weight:sel===r?5:3,opacity:on?.85:.15}).bindTooltip(`${r.day}: Run ${r.route}, ${r.name}`,{sticky:true}).on("click",()=>{sel=r;draw(false);}).addTo(layer);
+    lls.forEach((s,i)=>{const near=hav(s.ll,COV)<=R;
+      L.circleMarker(s.ll,{radius:near?6:4,color:"#fff",weight:1.5,fillColor:c,fillOpacity:on?1:.2,opacity:on?1:.2})
+        .bindTooltip(sel===r?`${i+1}. ${s.name}`:`${i+1}. ${s.name} (${s.cus}), ${s.pc}<br>Run ${r.route}, ${r.name}, ${r.day}<br>Set delivery days: ${s.days.join(", ")}`,sel===r?{permanent:true,direction:"right",offset:[6,0]}:undefined).addTo(layer);
+      if(on)pts.push(s.ll);});}
+  if(SUG){const b=SUG.best,c=color(b.r)||"#D9971A",ends=[b.before?b.before.ll:depotLL,b.after?b.after.ll:depotLL];
+    for(const e of ends)L.polyline([e,SUG.ll],{color:"#D9971A",weight:3,dashArray:"4 5"}).addTo(layer);
+    L.marker(SUG.ll,{icon:L.divIcon({className:"",html:'<div class="newpin"></div>',iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:2000})
+      .bindTooltip(`New shop ${SUG.pc}`,{permanent:true,direction:"top",offset:[0,-10]}).addTo(layer);
+    if(fit){map.fitBounds(L.latLngBounds([SUG.ll,...b.st.map(s=>s.ll)]),{padding:[40,40],maxZoom:14});return;}}
+  if(fit&&pts.length>1)map.fitBounds(L.latLngBounds(sel?[depotLL,...sel.stops.filter(s=>s.ll).map(s=>s.ll)]:pts),{padding:[30,30],maxZoom:12});
+}
+
+
+/* ---------- where should a new shop go? ---------- */
+const ROAD=1.3;            // straight line to road miles, as in the route optimiser
+let SUG=null;
+for(const d of DAYS)$("newDay").append(h("option",{value:d},d));
+/* "52.39213, -1.46807", "52.39213° N, 1.46807° W", Google Maps links with @lat,lng, q=lat,lng or !3dlat!4dlng */
+function coords(q){
+  let m=/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/.exec(q)||/[@=](-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/.exec(q);
+  if(!m)m=/^\(?\s*(-?\d{1,2}\.\d+)\s*°?\s*([NS])?\s*[, ]\s*(-?\d{1,3}\.\d+)\s*°?\s*([EW])?\s*\)?$/i.exec(q);
+  if(!m)return null;
+  let la,lo;if(m.length>=5){la=+m[1];lo=+m[3];if(/s/i.test(m[2]||""))la=-Math.abs(la);if(/w/i.test(m[4]||""))lo=-Math.abs(lo);}else{la=+m[1];lo=+m[2];}
+  if(la>49&&la<61&&lo>-9&&lo<3)return[la,lo];
+  if(lo>49&&lo<61&&la>-9&&la<3)return[lo,la];   // pasted the wrong way round
+  return null;
+}
+async function locate(q){
+  q=txt(q);const xy=coords(q);if(xy)return{ll:xy,how:"the map point you gave"};
+  if(/^https?:/i.test(q)&&/goo\.gl|g\.co/i.test(q))return{bad:"That’s a short share link, which can’t be opened here. In Google Maps, press and hold on the shop to drop a pin, then copy the two numbers shown (like 52.39213, -1.46807) and paste them in."};
+  const pc=normPc(q);if(!pc)return null;
+  if(!GEO.has(pc))await lookup([pc]);
+  if(GEO.has(pc))return{ll:GEO.get(pc),pc,how:pc};
+  for(const[pre,label]of [[pc.slice(0,-2),`the middle of postcode sector ${pc.slice(0,-2)} (${pc} itself couldn’t be looked up)`],[pc.split(" ")[0]+" ",`the middle of district ${pc.split(" ")[0]} (${pc} itself couldn’t be looked up)`]]){
+    let la=0,lo=0,n=0;for(const[k,v]of GEO)if(k.startsWith(pre)){la+=v[0];lo+=v[1];n++;}
+    if(n)return{ll:[la/n,lo/n],pc,how:label,approx:true};}
+  return{pc,ll:null};
+}
+function placeOptions(ll,day){
+  const out=[];
+  for(const r of RUNS){if(day&&r.day!==day)continue;const st=r.stops.filter(s=>s.ll);if(!st.length)continue;
+    const pts=[depotLL,...st.map(s=>s.ll),depotLL];let add=Infinity,gap=0;
+    for(let i=0;i<pts.length-1;i++){const c=hav(pts[i],ll)+hav(ll,pts[i+1])-hav(pts[i],pts[i+1]);if(c<add){add=c;gap=i;}}
+    let near=null,nd=Infinity;for(const s of st){const d=hav(s.ll,ll);if(d<nd){nd=d;near=s;}}
+    out.push({r,add:add*ROAD,gap,before:st[gap-1]||null,after:st[gap]||null,near,nd,st});}
+  return out.sort((a,b)=>a.add-b.add);
+}
+$("newPc").addEventListener("keydown",e=>{if(e.key==="Enter")$("suggest").click();});
+$("suggest").addEventListener("click",async()=>{
+  const box=$("answer");box.classList.remove("hidden");const q=$("newPc").value,day=$("newDay").value;
+  if(!RUNS.length){rc(box,"Load the files first.");return;}
+  rc(box,"Looking up the postcode…");
+  const loc=await locate(q);
+  if(loc&&loc.bad){rc(box,loc.bad);return;}
+  if(!loc){rc(box,`“${q}” isn’t a full UK postcode or a map position. Type a postcode like CV3 4BZ, paste the two numbers from Google Maps (like 52.39213, -1.46807), or tap the map.`);return;}
+  if(!loc.ll){rc(box,`${loc.pc} couldn’t be placed: the postcode lookup is blocked here and no other shops share that district. Tap “Or tap the map where the shop is”, or paste the two numbers from Google Maps.`);return;}
+  answerFor(loc,day);
+});
+function answerFor(loc,day){
+  const box=$("answer");box.classList.remove("hidden");
+  const opts=placeOptions(loc.ll,day);
+  if(!opts.length){rc(box,`No runs go out on ${day} in the template.`);return;}
+  const best=opts[0],r=best.r,R=Math.max(0.5,num($("miles").value)||10);
+  const sameRun=opts.filter(o=>o!==best&&o.r.route===r.route&&o.add<=best.add+1).map(o=>o.r.day);
+  const others=[];const seen=new Set([r.route+r.day]);
+  for(const o of opts.slice(1)){if(seen.has(o.r.route+o.r.day))continue;seen.add(o.r.route+o.r.day);if(o.r.route===r.route)continue;others.push(o);if(others.length>=3)break;}
+  const pos=best.before&&best.after?`between drop ${best.st.indexOf(best.before)+1} (${best.before.name}) and drop ${best.st.indexOf(best.after)+1} (${best.after.name})`
+    :best.after?`as the first drop, before ${best.after.name}`:`as the last drop, after ${best.before.name}`;
+  const distCov=hav(loc.ll,COV),nearCount=r.stops.filter(s=>s.ll&&hav(s.ll,COV)<=R).length;
+  const second=others[0];
+  rc(box,
+    h("p",{class:"pick"},`${loc.pc||"This shop"}: Run ${r.route}, ${r.name}, on ${r.day}${sameRun.length?` (the same run also goes ${sameRun.join(" and ")})`:""}`),
+    h("div",null,`Put it ${pos}.`),
+    h("ul",null,
+      h("li",null,`Of all ${new Set(opts.map(o=>o.r.route+o.r.day)).size} template runs${day?` on ${day}`:" in the week"}, this is the smallest detour: ${best.add<0.1?"it’s practically on the way, with almost no extra miles":`about ${best.add.toFixed(1)} extra miles on the road`}.`),
+      h("li",null,`The van already stops ${best.nd<0.1?"next door":`${best.nd.toFixed(1)} miles away`}, at ${best.near.name} (${best.near.pc}).`),
+      nearCount?h("li",null,`This run already has ${nearCount} drop${nearCount===1?"":"s"} within ${R} miles of Coventry, so no extra van or extra trip is needed.`):h("li",null,`The run passes about ${Math.max(0,r.min).toFixed(0)} miles from Coventry on its way, so no extra van or trip is needed.`),
+      second?h("li",null,`Next best: Run ${second.r.route}, ${second.r.name} (${second.r.day}), about ${second.add.toFixed(1)} extra miles.`):null),
+    h("p",{class:"muted"},`Placed at ${loc.how}${loc.approx?"":""}, ${distCov.toFixed(1)} miles from Coventry centre. Miles are straight-line × ${ROAD}. Before confirming, check the customer is happy with ${r.day}${sameRun.length?` or ${sameRun.join("/")}`:""} and that the van has room on that day.`));
+  SUG={ll:loc.ll,pc:loc.pc||"",best};dayFilter=r.day;sel=RUNS.find(x=>x===r)||null;
+  if(!r.status){dayFilter="All";} // it may not be one of the Coventry runs
+  draw(true,true);
+}
+let tapping=false;
+$("tapBtn").addEventListener("click",()=>{tapping=!tapping;$("tapBtn").setAttribute("aria-pressed",String(tapping));
+  $("tapBtn").textContent=tapping?"Now tap the shop’s spot on the map (zoom in first)":"Or tap the map where the shop is";
+  if(tapping&&map)document.getElementById("map").scrollIntoView({behavior:"smooth",block:"start"});});
+function mapTapped(e){if(!tapping)return;tapping=false;$("tapBtn").setAttribute("aria-pressed","false");$("tapBtn").textContent="Or tap the map where the shop is";
+  const ll=[+e.latlng.lat.toFixed(5),+e.latlng.lng.toFixed(5)];$("newPc").value=`${ll[0]}, ${ll[1]}`;
+  answerFor({ll,how:"the spot you tapped"},$("newDay").value);$("answer").scrollIntoView({behavior:"smooth",block:"nearest"});}
+/* ---------- wiring ---------- */
+const drop=$("drop"),fileIn=$("file");
+drop.addEventListener("click",()=>fileIn.click());
+drop.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();fileIn.click();}});
+["dragenter","dragover"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>addFiles([...e.dataTransfer.files]));
+fileIn.addEventListener("change",()=>{addFiles([...fileIn.files]);fileIn.value="";});
+$("miles").addEventListener("change",()=>{sel=null;draw(true);});
+$("dl").addEventListener("click",()=>{const R=Math.max(0.5,num($("miles").value)||10),rows=[];
+  for(const d of DAYS)for(const r of RUNS.filter(x=>x.status&&x.day===d))r.stops.forEach((s,i)=>rows.push({"Day":d,"Run":r.route,"Route name":r.name,"Through or near":r.status==="through"?"Through":"Near",
+    "Drop":i+1,"Cus no.":s.cus,"Shop":s.name,"Postcode":s.pc||"",[`Within ${R} mi of Coventry`]:s.ll&&hav(s.ll,COV)<=R?"Yes":"","Set delivery days":s.days.join(", ")}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{"Note":"No runs"}]),"Coventry runs");XLSX.writeFile(wb,"coventry_runs_and_shops.xlsx");});
+marks();
+window.__cr={readTemplateRows:(rows)=>{readTemplate(rows,0);},readGeoRows:(rows)=>{readGeo(rows,0);},readMovRows:(rows,n)=>{readMovements(rows,0,n||"movements.xlsx");},refresh,state:()=>({RUNS,BOOK})};
+})();
+</script>
+</body>
+</html>
